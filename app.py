@@ -1,6 +1,7 @@
 import streamlit as st
 import yt_dlp
 import os
+import base64
 
 # Title
 st.title("YouTube Downloader")
@@ -39,12 +40,10 @@ if url:
                         filename = ydl.prepare_filename(info)
                     st.success(f"Downloaded as {filename}")
                     with open(filename, "rb") as f:
-                        st.download_button(
-                            label=f"Click to download {filename}",
-                            data=f.read(),
-                            file_name=filename,
-                            mime="application/octet-stream"
-                        )
+                        data = f.read()
+                    b64 = base64.b64encode(data).decode()
+                    href = f'<a href="data:application/octet-stream;base64,{b64}" download="{filename}">Click to download {filename}</a>'
+                    st.markdown(href, unsafe_allow_html=True)
                 except Exception as e:
                     if '403' in str(e):
                         st.error("Download forbidden by YouTube (HTTP 403). This may be due to copyright, region, or age restrictions.")
