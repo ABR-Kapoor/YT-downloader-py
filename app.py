@@ -1,7 +1,6 @@
 import streamlit as st
 import yt_dlp
 import os
-from pydub import AudioSegment
 
 # Title
 st.title("YouTube Downloader")
