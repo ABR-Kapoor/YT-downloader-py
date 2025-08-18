@@ -12,37 +12,29 @@ if url:
     try:
         st.success(f"URL: {url}")
         download_type = st.radio("Download type:", ["Video", "Audio"])
+        # Get available formats
+        with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
+            info = ydl.extract_info(url, download=False)
+        formats = info.get('formats', [])
         if download_type == "Video":
-            quality = st.selectbox("Select video quality:", ["best", "1080p", "720p", "480p", "360p"])
-            extension = st.selectbox("Select extension:", ["mp4", "webm"])
+            video_formats = [f for f in formats if f.get('vcodec') != 'none' and f.get('acodec') != 'none']
+            options = [f"{f['format_id']} - {f.get('format_note','')} - {f.get('ext','')} - {f.get('resolution','')}" for f in video_formats]
         else:
-            quality = st.selectbox("Select audio quality:", ["best", "128k", "64k"])
-            extension = st.selectbox("Select extension:", ["mp3", "wav", "m4a"])
+            audio_formats = [f for f in formats if f.get('vcodec') == 'none']
+            options = [f"{f['format_id']} - {f.get('format_note','')} - {f.get('ext','')} - {f.get('abr','')}kbps" for f in audio_formats]
 
+        selected = st.selectbox("Select available format:", options)
         if st.button("Download"):
+            format_id = selected.split(' - ')[0]
             ydl_opts = {
                 'outtmpl': '%(title)s.%(ext)s',
+                'format': format_id,
             }
-            if download_type == "Video":
-                ydl_opts.update({
-                    'format': f'bestvideo[height<={quality.replace("p","")}]+bestaudio/best[height<={quality.replace("p","")}]',
-                    'merge_output_format': extension,
-                })
-            else:
-                ydl_opts.update({
-                    'format': f'bestaudio/best',
-                    'postprocessors': [{
-                        'key': 'FFmpegExtractAudio',
-                        'preferredcodec': extension,
-                        'preferredquality': quality.replace('k',''),
-                    }],
-                })
             try:
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     info = ydl.extract_info(url, download=True)
                     filename = ydl.prepare_filename(info)
                 st.success(f"Downloaded as {filename}")
-                # Offer file for user download
                 with open(filename, "rb") as f:
                     st.download_button(
                         label=f"Click to download {filename}",
