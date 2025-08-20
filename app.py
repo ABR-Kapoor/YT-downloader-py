@@ -31,13 +31,15 @@ if url:
         options_map = {}
 
         if download_type == "Video":
-            video_formats = [f for f in formats if f.get('vcodec') != 'none' and f.get('acodec') != 'none']
+            # Filter for formats that are directly downloadable and have both video and audio
+            video_formats = [f for f in formats if f.get('url') and f.get('vcodec') != 'none' and f.get('acodec') != 'none']
             video_formats.sort(key=lambda f: f.get('height') or 0, reverse=True)
             for f in video_formats:
                 display_text = f"{f.get('resolution', 'N/A')} ({f.get('ext')}) - {f.get('filesize_approx') or f.get('filesize') or 'N/A'}"
                 options_map[display_text] = f['format_id']
         else: # Audio
-            audio_formats = [f for f in formats if f.get('acodec') != 'none' and f.get('vcodec') == 'none']
+            # Filter for formats that are directly downloadable and audio-only
+            audio_formats = [f for f in formats if f.get('url') and f.get('acodec') != 'none' and f.get('vcodec') == 'none']
             audio_formats.sort(key=lambda f: f.get('abr') or 0, reverse=True)
             for f in audio_formats:
                 display_text = f"{f.get('format_note', '')} ({f.get('ext')}) - {f.get('abr',0)}kbps"
