@@ -27,22 +27,27 @@ if url:
         st.info("Video found! Please choose your download options below.")
         download_type = st.radio("Download type:", ["Video", "Audio"], horizontal=True)
         
-        options = []
-        if download_type == "Video":
-            # Filter for formats that have both video and audio
-            video_formats = [f for f in info.get('formats', []) if f.get('vcodec') != 'none' and f.get('acodec') != 'none']
-            video_formats.sort(key=lambda f: f.get('height', 0), reverse=True)
-            options = [f"{f['format_id']} - {f.get('resolution', 'N/A')} ({f.get('ext')})" for f in video_formats]
-        else: # Audio
-            audio_formats = [f for f in info.get('formats', []) if f.get('acodec') != 'none' and f.get('vcodec') == 'none']
-            audio_formats.sort(key=lambda f: f.get('abr') or 0, reverse=True)
-            options = [f"{f['format_id']} - {f.get('format_note','')} ({f.get('ext')}) - {f.get('abr',0)}kbps" for f in audio_formats]
+        formats = info.get('formats', [])
+        options_map = {}
 
-        if options:
-            selected_option = st.selectbox("Choose a format:", options)
+        if download_type == "Video":
+            video_formats = [f for f in formats if f.get('vcodec') != 'none' and f.get('acodec') != 'none']
+            video_formats.sort(key=lambda f: f.get('height') or 0, reverse=True)
+            for f in video_formats:
+                display_text = f"{f.get('resolution', 'N/A')} ({f.get('ext')}) - {f.get('filesize_approx') or f.get('filesize') or 'N/A'}"
+                options_map[display_text] = f['format_id']
+        else: # Audio
+            audio_formats = [f for f in formats if f.get('acodec') != 'none' and f.get('vcodec') == 'none']
+            audio_formats.sort(key=lambda f: f.get('abr') or 0, reverse=True)
+            for f in audio_formats:
+                display_text = f"{f.get('format_note', '')} ({f.get('ext')}) - {f.get('abr',0)}kbps"
+                options_map[display_text] = f['format_id']
+
+        if options_map:
+            selected_key = st.selectbox("Choose a format:", options_map.keys())
             
             if st.button("Prepare Download"):
-                format_id = selected_option.split(' - ')[0]
+                format_id = options_map[selected_key]
                 
                 ydl_opts = {
                     'outtmpl': '%(title)s.%(ext)s',
@@ -60,7 +65,6 @@ if url:
                         with open(filename, "rb") as f:
                             data = f.read()
                         
-                        # Create the download button
                         st.download_button(
                             label=f"Click to download {os.path.basename(filename)}",
                             data=data,
@@ -68,7 +72,6 @@ if url:
                             mime="application/octet-stream"
                         )
                         
-                        # Clean up the downloaded file from the server
                         try:
                             os.remove(filename)
                         except OSError:
