@@ -11,7 +11,7 @@ url = st.text_input("Enter YouTube video URL:")
 
 if url:
     try:
-        st.success(f"URL: {url}")
+        st.info("Checking video details...")
         download_type = st.radio("Download type:", ["Video", "Audio"])
         
         with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
@@ -37,7 +37,7 @@ if url:
             options = [f"{f['format_id']} - {f.get('format_note','')} - {f.get('ext','')} - {f.get('abr','')}kbps" for f in formats_for_type]
 
         if options:
-            selected_option = st.selectbox("Select available format:", options)
+            selected_option = st.selectbox("Choose a format:", options)
             if st.button("Download"):
                 format_id = selected_option.split(' - ')[0]
                 
@@ -63,30 +63,50 @@ if url:
                         'format': format_id,
                     }
 
+                if 'merge_output_format' in ydl_opts:
+                    st.info("Please wait, we're preparing your download. This might take a moment...")
+
                 try:
                     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                         info = ydl.extract_info(url, download=True)
-                        filename = ydl.prepare_filename(info)
-                        
-                        # After merging, the filename extension might change
-                        if download_type == 'Video' and 'merge_output_format' in ydl_opts:
-                            base, _ = os.path.splitext(filename)
-                            filename = base + '.' + ydl_opts['merge_output_format']
+                        filename = info.get('_filename')
 
-                    st.success(f"Downloaded as {os.path.basename(filename)}")
-                    # Check if file exists before reading
-                    if os.path.exists(filename):
+                    if filename and os.path.exists(filename):
+                        st.success("Your download is ready!")
                         with open(filename, "rb") as f:
                             data = f.read()
                         b64 = base64.b64encode(data).decode()
-                        href = f'''<a href="data:application/octet-stream;base64,{b64}" download="{os.path.basename(filename)}">Click to download {os.path.basename(filename)}</a>'''
-                        st.markdown(href, unsafe_allow_html=True)
+                        button_html = f'''
+<style>
+    .download-btn {{
+        display: inline-block;
+        padding: 0.5em 1em;
+        color: white;
+        background-color: #FF4B4B;
+        border-radius: 0.25rem;
+        text-decoration: none;
+        font-weight: bold;
+    }}
+    .download-btn:hover {{
+        background-color: #FF6B6B;
+    }}
+</style>
+<a href="data:application/octet-stream;base64,{b64}" download="{os.path.basename(filename)}" class="download-btn">Download {os.path.basename(filename)}</a>
+'''
+                        st.markdown(button_html, unsafe_allow_html=True)
+                        
+                        # Clean up the downloaded file from the server
+                        try:
+                            os.remove(filename)
+                        except OSError:
+                            # This error is not critical for the user experience, so we can ignore it.
+                            pass
                     else:
-                        st.error(f"Could not find downloaded file: {filename}. It may be a permission issue or an error during download/merge process.")
+                        st.error("Sorry, we couldn't prepare your download. Please try a different format or check the URL.")
 
-                except Exception as e:
-                    st.error(f"Download error: {e}. If you are merging formats, make sure ffmpeg is available.")
+                except Exception:
+                    st.error("Oops, something went wrong. If you chose a 'video-only' format, it may require special tools on our end. Please try a format that includes audio.")
         else:
-            st.warning("No downloadable formats available for this video/audio. It may be restricted or unavailable.")
-    except Exception as e:
-        st.error(f"Error: {e}")
+            st.warning("Sorry, we couldn't find any downloadable formats for this video. It might be private, age-restricted, or unavailable.")
+    except Exception:
+        st.error("An unexpected error occurred. Please double-check the URL or try again.")
