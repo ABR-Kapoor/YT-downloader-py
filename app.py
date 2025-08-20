@@ -35,7 +35,7 @@ if url:
             options = [f"{f['format_id']} - {f.get('resolution', 'N/A')} ({f.get('ext')})" for f in video_formats]
         else: # Audio
             audio_formats = [f for f in info.get('formats', []) if f.get('acodec') != 'none' and f.get('vcodec') == 'none']
-            audio_formats.sort(key=lambda f: f.get('abr', 0), reverse=True)
+            audio_formats.sort(key=lambda f: f.get('abr') or 0, reverse=True)
             options = [f"{f['format_id']} - {f.get('format_note','')} ({f.get('ext')}) - {f.get('abr',0)}kbps" for f in audio_formats]
 
         if options:
